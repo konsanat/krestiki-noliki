@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-Нолики</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #f7971e, #ffd200);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status {
+            font-size: 1.3rem;
+            margin: 20px 0;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .status .player-x {
+            color: #ff6b6b;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+
+        .status .player-o {
+            color: #4ecdc4;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 120px);
+            grid-template-rows: repeat(3, 120px);
+            gap: 8px;
+            margin: 0 auto 25px;
+            justify-content: center;
+        }
+
+        .cell {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .cell:hover:not(.taken) {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .cell.taken {
+            cursor: not-allowed;
+        }
+
+        .cell.x {
+            color: #ff6b6b;
+            text-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+            animation: popIn 0.3s ease;
+        }
+
+        .cell.o {
+            color: #4ecdc4;
+            text-shadow: 0 0 15px rgba(78, 205, 196, 0.6);
+            animation: popIn 0.3s ease;
+        }
+
+        .cell.win {
+            animation: winPulse 0.6s ease infinite alternate;
+            background: rgba(255, 215, 0, 0.15);
+            border-color: rgba(255, 215, 0, 0.5);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes winPulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.08); }
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+
+        .score {
+            padding: 10px 24px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .score .label {
+            opacity: 0.7;
+            font-size: 0.85rem;
+        }
+
+        .score .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .score.x-score .value { color: #ff6b6b; }
+        .score.o-score .value { color: #4ecdc4; }
+        .score.draw-score .value { color: #a8a8a8; }
+
+        .btn {
+            padding: 12px 36px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 5px;
+        }
+
+        .btn-restart {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            color: #1a1a2e;
+        }
+
+        .btn-restart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(247, 151, 30, 0.4);
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .winner-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .winner-overlay.active {
+            display: flex;
+        }
+
+        .winner-modal {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 50px 60px;
+            border-radius: 24px;
+            text-align: center;
+            animation: popIn 0.4s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .winner-modal h2 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .winner-modal .emoji {
+            font-size: 4rem;
+            margin: 15px 0;
+        }
+
+        .winner-modal .btn {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Крестики-Нолики</h1>
+        
+        <div class="scoreboard">
+            <div class="score x-score">
+                <div class="label">Крестики (X)</div>
+                <div class="value" id="scoreX">0</div>
+            </div>
+            <div class="score draw-score">
+                <div class="label">Ничьи</div>
+                <div class="value" id="scoreDraw">0</div>
+            </div>
+            <div class="score o-score">
+                <div class="label">Нолики (O)</div>
+                <div class="value" id="scoreO">0</div>
+            </div>
+        </div>
+
+        <div class="status" id="status">
+            Ход игрока: <span class="player-x">X</span>
+        </div>
+
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+
+        <div>
+            <button class="btn btn-restart" onclick="restartGame()">Новая игра</button>
+            <button class="btn btn-reset" onclick="resetScores()">Сбросить счёт</button>
+        </div>
+    </div>
+
+    <div class="winner-overlay" id="winnerOverlay">
+        <div class="winner-modal" id="winnerModal">
+            <h2 id="winnerText"></h2>
+            <div class="emoji" id="winnerEmoji"></div>
+            <button class="btn btn-restart" onclick="restartGame(); closeOverlay();">Играть снова</button>
+            <button class="btn btn-reset" onclick="closeOverlay();">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let scores = { X: 0, O: 0, draw: 0 };
+
+        const winConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        const cells = document.querySelectorAll('.cell');
+        const statusEl = document.getElementById('status');
+        const overlay = document.getElementById('winnerOverlay');
+
+        cells.forEach(cell => {
+            cell.addEventListener('click', () => handleCellClick(cell));
+        });
+
+        function handleCellClick(cell) {
+            const index = cell.getAttribute('data-index');
+
+            if (board[index] !== '' || !gameActive) return;
+
+            board[index] = currentPlayer;
+            cell.textContent = currentPlayer;
+            cell.classList.add('taken', currentPlayer.toLowerCase());
+
+            if (checkWin()) {
+                gameActive = false;
+                scores[currentPlayer]++;
+                updateScores();
+                highlightWinCells();
+                setTimeout(() => showWinner(currentPlayer), 400);
+                return;
+            }
+
+            if (board.every(cell => cell !== '')) {
+                gameActive = false;
+                scores.draw++;
+                updateScores();
+                setTimeout(() => showDraw(), 400);
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus();
+        }
+
+        function checkWin() {
+            return winConditions.some(condition => {
+                return condition.every(index => board[index] === currentPlayer);
+            });
+        }
+
+        function highlightWinCells() {
+            winConditions.forEach(condition => {
+                if (condition.every(index => board[index] === currentPlayer)) {
+                    condition.forEach(index => {
+                        cells[index].classList.add('win');
+                    });
+                }
+            });
+        }
+
+        function updateStatus() {
+            const className = currentPlayer === 'X' ? 'player-x' : 'player-o';
+            statusEl.innerHTML = `Ход игрока: <span class="${className}">${currentPlayer}</span>`;
+        }
+
+        function updateScores() {
+            document.getElementById('scoreX').textContent = scores.X;
+            document.getElementById('scoreO').textContent = scores.O;
+            document.getElementById('scoreDraw').textContent = scores.draw;
+        }
+
+        function showWinner(player) {
+            const modal = document.getElementById('winnerModal');
+            const text = document.getElementById('winnerText');
+            const emoji = document.getElementById('winnerEmoji');
+
+            if (player === 'X') {
+                text.innerHTML = 'Победили <span class="player-x">Крестики!</span>';
+                emoji.textContent = '🎉';
+            } else {
+                text.innerHTML = 'Победили <span class="player-o">Нолики!</span>';
+                emoji.textContent = '🎉';
+            }
+
+            overlay.classList.add('active');
+        }
+
+        function showDraw() {
+            const modal = document.getElementById('winnerModal');
+            const text = document.getElementById('winnerText');
+            const emoji = document.getElementById('winnerEmoji');
+
+            text.textContent = 'Ничья!';
+            emoji.textContent = '🤝';
+
+            overlay.classList.add('active');
+        }
+
+        function closeOverlay() {
+            overlay.classList.remove('active');
+        }
+
+        function restartGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+            });
+
+            updateStatus();
+        }
+
+        function resetScores() {
+            scores = { X: 0, O: 0, draw: 0 };
+            updateScores();
+            restartGame();
+        }
+
+        // Закрытие оверлея по клику вне модального окна
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeOverlay();
+        });
+    </script>
+</body>
+</html>
